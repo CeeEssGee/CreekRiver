@@ -139,11 +139,12 @@ app.MapPost("/api/reservations", (CreekRiverDbContext db, Reservation newRes) =>
             return Results.BadRequest("Reservation checkout must be at least one day after checkin");
         }
         // check if reservation is too long
-        // Campsite campsite = db.Campsites.Include(c => c.CampsiteType).Single(c => c.Id == newRes.CampsiteId);
-        // if (campsite != null && newRes.TotalNights > campsite.CampsiteType.MaxReservationDays)
-        // {
-        //     return Results.BadRequest("Reservation exceeds maximum reservation days for this campsite type");
-        // }
+        Campsite campsite = db.Campsites.Include(c => c.CampsiteType).Single(c => c.Id == newRes.CampsiteId);
+        if (campsite != null && newRes.TotalNights > campsite.CampsiteType.MaxReservationDays)
+        {
+            return Results.BadRequest("Reservation exceeds maximum reservation days for this campsite type");
+        }
+        // do the challenges: https://github.com/nashville-software-school/server-side-dotnet-curriculum/blob/main/book-3-sql-efcore/chapters/creek-river-reservation-validation.md
         return Results.Created($"/api/reservations/{newRes.Id}", newRes);
     }
     catch
@@ -151,6 +152,18 @@ app.MapPost("/api/reservations", (CreekRiverDbContext db, Reservation newRes) =>
         return Results.BadRequest("Invalid data submitted");
     }
 
+});
+
+app.MapDelete("/api/reservations/{id}", (CreekRiverDbContext db, int id) =>
+{
+    Reservation reservation = db.Reservations.SingleOrDefault(reservation => reservation.Id == id);
+    if (reservation == null)
+    {
+        return Results.NotFound();
+    }
+    db.Reservations.Remove(reservation);
+    db.SaveChanges();
+    return Results.NoContent();
 });
 
 app.Run();
